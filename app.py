@@ -303,7 +303,7 @@ def main():
         st.info("""
         **To fix this:**
         1. Train your model in Jupyter Notebook
-        2. Save it using: `torch.save({'model_state_dict': model.state_dict(), 'classes': classes}, r'C:\\Users\\Ragu\\garbage app\\best_garbage_model.pth')`
+        2. Save it using: `torch.save({'model_state_dict': model.state_dict(), 'classes': classes}, r"C:/Users/Ragu/medical_insurance/notebook/best_garbage_model.pth")
         3. Update the path in the sidebar if needed
         """)
         st.stop()
