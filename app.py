@@ -6,9 +6,8 @@ import numpy as np
 import torchvision.models as models
 import torch.nn as nn
 from torchvision import transforms
-
-# Direct path to model - UPDATE THIS TO YOUR ACTUAL PATH
-MODEL_PATH = r"C:\Users\Ragu\garbage app\best_garbage_model.pth"
+import os
+import gdown
 
 # Default classes
 CLASSES = [
@@ -16,6 +15,15 @@ CLASSES = [
     'clothes', 'green-glass', 'metal', 'paper',
     'plastic', 'shoes', 'trash', 'white-glass'
 ]
+
+# Google Drive file ID (replace with your actual file ID)
+# Get this from your Google Drive share link
+# Example: https://drive.google.com/file/d/1A2B3C4D5E6F7G8H9I0J/view?usp=sharing
+# File ID: 1A2B3C4D5E6F7G8H9I0J
+GDRIVE_FILE_ID = "1AGJNTCTx406d14nmbsgs1rxPF1829hoy"  # ← REPLACE THIS!
+
+# Local path (works on both Windows and Linux)
+MODEL_PATH = r"C:\Users\Ragu\garbage app\best_garbage_model.pth"
 
 # Page config
 st.set_page_config(
@@ -102,10 +110,29 @@ class GarbageClassifier(nn.Module):
     def forward(self, x):
         return self.backbone(x)
 
+def download_model():
+    """Download model from Google Drive if not exists"""
+    if not os.path.exists(MODEL_PATH):
+        with st.spinner("📥 Downloading model... This may take a minute (~18MB)"):
+            try:
+                url = f"https://drive.google.com/uc?id={GDRIVE_FILE_ID}"
+                gdown.download(url, MODEL_PATH, quiet=False)
+                st.success("✅ Model downloaded successfully!")
+                return True
+            except Exception as e:
+                st.error(f"❌ Failed to download model: {e}")
+                return False
+    return True
+
 @st.cache_resource
 def load_model():
-    """Load model from direct path"""
+    """Load model (download if needed)"""
     device = torch.device('cpu')
+    
+    # Download if not exists (for Streamlit Cloud)
+    if not os.path.exists(MODEL_PATH):
+        if not download_model():
+            return None, CLASSES, False
     
     try:
         checkpoint = torch.load(MODEL_PATH, map_location=device)
@@ -113,9 +140,7 @@ def load_model():
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
         
-        # Try to get classes from checkpoint, else use defaults
         classes = checkpoint.get('classes', CLASSES)
-        
         return model, classes, True
         
     except Exception as e:
@@ -229,7 +254,8 @@ def main():
     # Sidebar
     with st.sidebar:
         st.header("⚙️ App Info")
-        st.code(f"Model path: {MODEL_PATH}")
+        st.write(f"Model: `{MODEL_PATH}`")
+        st.write(f"Exists locally: `{os.path.exists(MODEL_PATH)}`")
         
         st.divider()
         st.header("🌍 Environmental Impact")
@@ -252,8 +278,7 @@ def main():
     
     if not loaded:
         st.error("⚠️ Model failed to load!")
-        st.info(f"Looking for: `{MODEL_PATH}`")
-        st.info("Please check the path is correct and model file exists.")
+        st.info("Please check your Google Drive file ID is correct.")
         st.stop()
     
     st.sidebar.success(f"✅ Loaded: {len(classes)} classes")
