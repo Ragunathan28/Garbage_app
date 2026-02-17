@@ -1,4 +1,4 @@
-# ♻️ Smart Garbage Classifier
+[# ♻️ Smart Garbage Classifier
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([YOUR_STREAMLIT_URL_HERE](https://garbageapp-nmywtwey6uwqberkwnukwp.streamlit.app/))
 ![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
@@ -38,4 +38,5 @@ cd garbage-classifier
 pip install -r requirements.txt
 
 # Run the app
-streamlit run app.py
+
+streamlit run app.py](https://github.com/Ragunathan28/Garbage_app.git)
