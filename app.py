@@ -6,7 +6,16 @@ import numpy as np
 import torchvision.models as models
 import torch.nn as nn
 from torchvision import transforms
-import os
+
+# Direct path to model - UPDATE THIS TO YOUR ACTUAL PATH
+MODEL_PATH = r"C:\Users\Ragu\garbage app\best_garbage_model.pth"
+
+# Default classes
+CLASSES = [
+    'battery', 'biological', 'brown-glass', 'cardboard',
+    'clothes', 'green-glass', 'metal', 'paper',
+    'plastic', 'shoes', 'trash', 'white-glass'
+]
 
 # Page config
 st.set_page_config(
@@ -76,7 +85,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Model class definition (must match training architecture)
+# Model class definition
 class GarbageClassifier(nn.Module):
     def __init__(self, num_classes=12, pretrained=False):
         super(GarbageClassifier, self).__init__()
@@ -94,34 +103,26 @@ class GarbageClassifier(nn.Module):
         return self.backbone(x)
 
 @st.cache_resource
-def load_model(model_path):
-    """Load the trained model from specific path"""
+def load_model():
+    """Load model from direct path"""
     device = torch.device('cpu')
     
-    # Default classes if not in checkpoint
-    classes = [
-        'battery', 'biological', 'brown-glass', 'cardboard',
-        'clothes', 'green-glass', 'metal', 'paper',
-        'plastic', 'shoes', 'trash', 'white-glass'
-    ]
-    
     try:
-        checkpoint = torch.load(model_path, map_location=device)
+        checkpoint = torch.load(MODEL_PATH, map_location=device)
         model = GarbageClassifier(num_classes=12, pretrained=False)
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
         
-        # Load classes from checkpoint if available
-        if 'classes' in checkpoint:
-            classes = checkpoint['classes']
-            
+        # Try to get classes from checkpoint, else use defaults
+        classes = checkpoint.get('classes', CLASSES)
+        
         return model, classes, True
+        
     except Exception as e:
         st.error(f"Error loading model: {e}")
-        return None, classes, False
+        return None, CLASSES, False
 
 def get_transforms():
-    """Preprocessing transforms for inference"""
     return transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.ToTensor(),
@@ -130,7 +131,6 @@ def get_transforms():
     ])
 
 def predict_image(model, image, classes):
-    """Make prediction on image"""
     transform = get_transforms()
     image_tensor = transform(image).unsqueeze(0)
     
@@ -146,142 +146,92 @@ def predict_image(model, image, classes):
     return pred_class, confidence_score, probs
 
 def get_class_info(class_name):
-    """Get recycling info for each garbage category"""
     info = {
         'battery': {
-            'color': '#e74c3c',
-            'icon': '🔋',
-            'category': 'Hazardous Waste',
+            'color': '#e74c3c', 'icon': '🔋', 'category': 'Hazardous Waste',
             'instructions': 'Take to designated battery recycling points. Never throw in regular trash!',
             'tip': 'Batteries contain heavy metals that can contaminate soil and water.'
         },
         'biological': {
-            'color': '#795548',
-            'icon': '🍎',
-            'category': 'Organic Waste',
+            'color': '#795548', 'icon': '🍎', 'category': 'Organic Waste',
             'instructions': 'Compost if possible. Use biodegradable bags for collection.',
             'tip': 'Organic waste can be turned into nutrient-rich compost for gardens.'
         },
         'brown-glass': {
-            'color': '#8d6e63',
-            'icon': '🍺',
-            'category': 'Recyclable',
+            'color': '#8d6e63', 'icon': '🍺', 'category': 'Recyclable',
             'instructions': 'Rinse and place in glass recycling bin. Remove caps and lids.',
             'tip': 'Brown glass protects contents from UV light - great for beer and medicine bottles!'
         },
         'cardboard': {
-            'color': '#d4a373',
-            'icon': '📦',
-            'category': 'Recyclable',
+            'color': '#d4a373', 'icon': '📦', 'category': 'Recyclable',
             'instructions': 'Flatten boxes to save space. Keep dry and clean.',
             'tip': 'Recycling cardboard saves 25% of the energy needed to make new cardboard.'
         },
         'clothes': {
-            'color': '#e91e63',
-            'icon': '👕',
-            'category': 'Reusable/Donate',
+            'color': '#e91e63', 'icon': '👕', 'category': 'Reusable/Donate',
             'instructions': 'Donate if in good condition. Otherwise, textile recycling.',
             'tip': 'The fashion industry produces 10% of global carbon emissions.'
         },
         'green-glass': {
-            'color': '#4caf50',
-            'icon': '🍾',
-            'category': 'Recyclable',
+            'color': '#4caf50', 'icon': '🍾', 'category': 'Recyclable',
             'instructions': 'Rinse thoroughly. Remove corks and caps before recycling.',
             'tip': 'Green glass is often used for wine bottles and can be recycled infinitely.'
         },
         'metal': {
-            'color': '#607d8b',
-            'icon': '🥫',
-            'category': 'Recyclable',
+            'color': '#607d8b', 'icon': '🥫', 'category': 'Recyclable',
             'instructions': 'Rinse cans. Crush to save space. Remove labels if possible.',
             'tip': 'Aluminum cans can be recycled and back on shelves in just 60 days!'
         },
         'paper': {
-            'color': '#ffeb3b',
-            'icon': '📄',
-            'category': 'Recyclable',
+            'color': '#ffeb3b', 'icon': '📄', 'category': 'Recyclable',
             'instructions': 'Keep dry and clean. Remove plastic windows from envelopes.',
             'tip': 'Recycling one ton of paper saves 17 trees and 7,000 gallons of water.'
         },
         'plastic': {
-            'color': '#ff9800',
-            'icon': '🥤',
-            'category': 'Recyclable',
+            'color': '#ff9800', 'icon': '🥤', 'category': 'Recyclable',
             'instructions': 'Check recycling number. Rinse containers. Crush bottles.',
             'tip': 'Only 9% of all plastic ever made has been recycled. Do your part!'
         },
         'shoes': {
-            'color': '#9c27b0',
-            'icon': '👟',
-            'category': 'Donate/Reuse',
+            'color': '#9c27b0', 'icon': '👟', 'category': 'Donate/Reuse',
             'instructions': 'Donate to charity if wearable. Some brands offer recycling programs.',
             'tip': 'Shoes can take 30-40 years to decompose in landfills.'
         },
         'trash': {
-            'color': '#616161',
-            'icon': '🗑️',
-            'category': 'Landfill',
+            'color': '#616161', 'icon': '🗑️', 'category': 'Landfill',
             'instructions': 'Last resort. Ensure no recyclable materials are mixed in.',
             'tip': 'Aim for zero waste - reduce and reuse before throwing away.'
         },
         'white-glass': {
-            'color': '#f5f5f5',
-            'icon': '🥛',
-            'category': 'Recyclable',
+            'color': '#f5f5f5', 'icon': '🥛', 'category': 'Recyclable',
             'instructions': 'Rinse well. Remove lids and caps. Keep separate from colored glass.',
             'tip': 'Clear glass is the most valuable for recycling as it can be made into any color.'
         }
     }
     return info.get(class_name, {
-        'color': '#9e9e9e',
-        'icon': '❓',
-        'category': 'Unknown',
+        'color': '#9e9e9e', 'icon': '❓', 'category': 'Unknown',
         'instructions': 'Please check local guidelines.',
         'tip': 'When in doubt, check with your local waste management authority.'
     })
 
 def get_bin_color(category):
-    """Get bin color for waste category"""
     bins = {
-        'Recyclable': '#2196f3',
-        'Organic Waste': '#4caf50',
-        'Hazardous Waste': '#f44336',
-        'Reusable/Donate': '#ff9800',
-        'Donate/Reuse': '#ff9800',
-        'Landfill': '#616161',
-        'Unknown': '#9e9e9e'
+        'Recyclable': '#2196f3', 'Organic Waste': '#4caf50',
+        'Hazardous Waste': '#f44336', 'Reusable/Donate': '#ff9800',
+        'Donate/Reuse': '#ff9800', 'Landfill': '#616161', 'Unknown': '#9e9e9e'
     }
     return bins.get(category, '#9e9e9e')
 
 def main():
-    # Header
     st.markdown('<h1 class="main-header">♻️ Smart Garbage Classifier</h1>', unsafe_allow_html=True)
     st.markdown('<p class="subheader">AI-Powered Waste Sorting for a Cleaner Planet 🌍</p>', unsafe_allow_html=True)
     
-    # Sidebar - Model Path Configuration
+    # Sidebar
     with st.sidebar:
-        st.header("⚙️ Configuration")
-        
-        # Default path - change this to your actual path
-        default_path = r"C:\Users\Ragu\medical_insurance\notebook\best_garbage_model.pth"
-        
-        model_path = st.text_input(
-            "Model Path", 
-            value=default_path,
-            help="Full path to your trained model file (.pth)"
-        )
-        
-        # Verify path exists
-        path_exists = os.path.exists(model_path)
-        if path_exists:
-            st.success(f"✅ File found")
-        else:
-            st.error(f"❌ File not found")
-            st.info(f"Current working directory: {os.getcwd()}")
+        st.header("⚙️ App Info")
+        st.code(f"Model path: {MODEL_PATH}")
         
         st.divider()
-        
         st.header("🌍 Environmental Impact")
         facts = [
             ("🌳", "17 trees saved per ton of paper"),
@@ -297,22 +247,13 @@ def main():
             st.cache_resource.clear()
             st.rerun()
     
-    # Check if model path is valid before loading
-    if not path_exists:
-        st.error("⚠️ Please provide a valid model path in the sidebar")
-        st.info("""
-        **To fix this:**
-        1. Train your model in Jupyter Notebook
-        2. Save it using: `torch.save({'model_state_dict': model.state_dict(), 'classes': classes}, r"C:/Users/Ragu/medical_insurance/notebook/best_garbage_model.pth")
-        3. Update the path in the sidebar if needed
-        """)
-        st.stop()
-    
     # Load model
-    model, classes, loaded = load_model(model_path)
+    model, classes, loaded = load_model()
     
     if not loaded:
-        st.error("⚠️ Failed to load model. Check if the file is a valid PyTorch model.")
+        st.error("⚠️ Model failed to load!")
+        st.info(f"Looking for: `{MODEL_PATH}`")
+        st.info("Please check the path is correct and model file exists.")
         st.stop()
     
     st.sidebar.success(f"✅ Loaded: {len(classes)} classes")
@@ -325,8 +266,7 @@ def main():
         
         uploaded_file = st.file_uploader(
             "Drop your waste item image here...",
-            type=['jpg', 'jpeg', 'png', 'webp'],
-            help="Take a clear photo of the waste item for best results"
+            type=['jpg', 'jpeg', 'png', 'webp']
         )
         
         camera_input = st.camera_input("Or take a photo now 📷")
@@ -357,7 +297,6 @@ def main():
             
             info = get_class_info(pred_class)
             
-            # Main prediction card
             st.markdown(f"""
             <div class="prediction-card" style="background: linear-gradient(135deg, {info['color']} 0%, {info['color']}dd 100%);">
                 <div style="font-size: 4rem; margin-bottom: 0.5rem;">{info['icon']}</div>
@@ -367,7 +306,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Category badge
             bin_color = get_bin_color(info['category'])
             st.markdown(f"""
             <div style="text-align: center; margin: 1rem 0;">
@@ -378,11 +316,9 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Instructions
             st.subheader("📋 Disposal Instructions")
             st.info(info['instructions'])
             
-            # Eco tip
             st.markdown(f"""
             <div class="eco-tip">
                 <strong>💡 Did you know?</strong><br>
@@ -390,7 +326,6 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Detailed probabilities
             with st.expander("📊 Detailed Confidence Breakdown"):
                 sorted_indices = np.argsort(all_probs)[::-1]
                 
@@ -417,14 +352,10 @@ def main():
             
             st.subheader("🗂️ Supported Categories")
             example_items = [
-                ("🔋", "Battery", "#e74c3c"),
-                ("🍎", "Biological", "#795548"),
-                ("📦", "Cardboard", "#d4a373"),
-                ("🥫", "Metal", "#607d8b"),
-                ("📄", "Paper", "#ffeb3b"),
-                ("🥤", "Plastic", "#ff9800"),
-                ("🍾", "Glass", "#4caf50"),
-                ("👕", "Clothes", "#e91e63")
+                ("🔋", "Battery", "#e74c3c"), ("🍎", "Biological", "#795548"),
+                ("📦", "Cardboard", "#d4a373"), ("🥫", "Metal", "#607d8b"),
+                ("📄", "Paper", "#ffeb3b"), ("🥤", "Plastic", "#ff9800"),
+                ("🍾", "Glass", "#4caf50"), ("👕", "Clothes", "#e91e63")
             ]
             
             cols = st.columns(4)
